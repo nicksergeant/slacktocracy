@@ -3,7 +3,7 @@
   "evil": true,
   "esnext": true,
   "globals": {
-
+    "process": true,
   },
   "globalstrict": true
 }

@@ -19,5 +19,8 @@
   "bugs": {
     "url": "https://github.com/nicksergeant/slacktocracy/issues"
   },
-  "homepage": "https://github.com/nicksergeant/slacktocracy"
+  "homepage": "https://github.com/nicksergeant/slacktocracy",
+  "dependencies": {
+    "bluebird": "^2.9.13"
+  }
 }

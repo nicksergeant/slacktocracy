@@ -9,7 +9,7 @@ A tiny little app to post Fitocracy workouts to Slack.
 4. `heroku config:add FITOCRACY_USERS_TO_FOLLOW=nicksergeant`
 5. `heroku config:add FITOCRACY_USERNAME=<username>`
 6. `heroku config:add FITOCRACY_PASSWORD=<password>`
-7. `heroku config:add SLACK_WEBHOOK_URL=<slack_webhook_url>,<slack_webhook_url2>`
+7. `heroku config:add SLACK_WEBHOOK_URLS=<slack_webhook_url>,<slack_webhook_url2>`
 8. `heroku addons:add mongolab:sandbox`
 9. `heroku addons:add scheduler:standard`
 10. `git push heroku`
