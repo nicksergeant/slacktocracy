@@ -12,5 +12,6 @@ A tiny little app to post Fitocracy workouts to Slack.
 7. `heroku config:add SLACK_WEBHOOK_URL=<slack_webhook_url>,<slack_webhook_url2>`
 8. `heroku addons:add mongolab:sandbox`
 9. `heroku addons:add scheduler:standard`
-10. `heroku addons:open scheduler`
-11. Add job -> `node index.js` -> `Every 10 minutes`
+10. `git push heroku`
+11. `heroku addons:open scheduler`
+12. Add job -> `node index.js` -> `Every 10 minutes`
