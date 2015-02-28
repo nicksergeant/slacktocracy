@@ -1,0 +1,23 @@
+{
+  "name": "slacktocracy",
+  "version": "1.0.0",
+  "description": "A tiny little app to post Fitocracy workouts to Slack.",
+  "main": "index.js",
+  "engines": {
+    "node": "0.12.x"
+  },
+  "scripts": {
+    "start": "node --harmony --harmony_generators --use-strict .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nicksergeant/slacktocracy.git"
+  },
+  "author": "Nick Sergeant",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nicksergeant/slacktocracy/issues"
+  },
+  "homepage": "https://github.com/nicksergeant/slacktocracy"
+}

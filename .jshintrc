@@ -1,0 +1,9 @@
+{
+  "expr": true,
+  "evil": true,
+  "esnext": true,
+  "globals": {
+
+  },
+  "globalstrict": true
+}
