@@ -4,10 +4,9 @@
   "description": "A tiny little app to post Fitocracy workouts to Slack.",
   "main": "index.js",
   "engines": {
-    "node": "0.12.x"
+    "iojs": "1.4.x"
   },
   "scripts": {
-    "start": "node --harmony --harmony_generators --use-strict .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
