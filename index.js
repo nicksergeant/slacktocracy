@@ -12,30 +12,59 @@ const slackWebhookUrls = process.env.SLACK_WEBHOOK_URLS;
 function linkify(link, text) {
   return `<${ link }|${ text }>`;
 }
-function parseAction(action) {
+function parseGroupedAction(action) {
+  let exercises = $('div.group_container:eq(0) div > ul > li', action).toArray();
 
-  if ($('div.group_container', action).length) {
+  return exercises.map(function(exercise, index) {
 
-    // TODO: Handle grouped workouts.
+    let $exercise = $(exercise);
+    let title = $('div.action_prompt', $exercise).text();
+    let sets = $('ul > li', $exercise).toArray();
 
-  } else {
+    let parsedSets = sets.map(function(set) {
 
-    let exercises = $('li:not(.stream_note)', action).toArray();
-    let title = `*${ $('div.action_prompt', action).text() }*`;
-    let note = $('li.stream_note', action).length ? 
-      `\n"${ $('li.stream_note', action).text() }"` : '';
+      let points = $('span.action_prompt_points', set).remove().text();
+      let title = $(set).text().trim();
 
-    let parsedExercises = exercises.map(function(exercise) {
-
-      let $exercise = $(exercise);
-      let points = $('span.action_prompt_points', $exercise).remove().text();
-
-      return `- ${ $exercise.text().trim() } (${ points } pts)`;
+      return `> ${ title } (${ points } pts)`;
     });
 
-    return `${ title }${ parsedExercises.join('\n') }${ note }`;
+    return index !== 0 ?
+      `> \n> *${ title.trim() }*\n${ parsedSets.join('\n') }` :
+      `> *${ title.trim() }*\n${ parsedSets.join('\n') }`;
+  });
+}
+function parseNonGroupedAction(action) {
+  let exercises = $('li:not(.stream_note)', action).toArray();
 
+  return exercises.map(function(exercise) {
+
+    let $exercise = $(exercise);
+    let points = $('span.action_prompt_points', $exercise).remove().text();
+
+    return `> ${ $exercise.text().trim() } (${ points } pts)`;
+  });
+}
+function parseAction(action) {
+
+  let groupedWorkout = $('div.group_container', action).length;
+
+  let title = `*${ $('> div.action_prompt', action).text().trim() }*`;
+
+  let note = '';
+  if ($('li.stream_note', action).length) {
+    note = groupedWorkout ? 
+      `\n\n"${ $('li.stream_note', action).text() }"` :
+      `\n> \n> "${ $('li.stream_note', action).text() }"`;
   }
+
+  let parsedExercises = groupedWorkout ?
+      parseGroupedAction(action) :
+      parseNonGroupedAction(action);
+
+  return groupedWorkout ?
+    `${ title }\n${ parsedExercises.join('\n') }${ note }\n\n` :
+    `\n> ${ title }\n${ parsedExercises.join('\n') }${ note }\n> `;
 
 }
 function lastActivity(userId) {
@@ -54,11 +83,11 @@ function lastActivity(userId) {
         let actions = $('ul.action_detail > li', workout).toArray();
         let author = $('.stream-author', workout).text().trim();
         let type = $('.stream-type', workout).text().trim();
-        let url = `https://www.fitocracy.com/${ $('.action_time', workout).attr('href') }`;
+        let url = `https://www.fitocracy.com${ $('.action_time', workout).attr('href') }`;
 
-        let parsedActions = actions.map(parseAction).join('\n\n');
+        let parsedActions = actions.map(parseAction);
 
-        let text = `${ author } ${ type }. ${ linkify(url, 'View »') }\n\n${ parsedActions }`;
+        let text = `${ author } ${ type }. ${ linkify(url, 'View »') }\n\n${ parsedActions.join('') }`;
 
         resolve({
           title: text
