@@ -9,8 +9,60 @@ const fitocracyCookie = process.env.FITOCRACY_COOKIE;
 const fitocracyUserIdsToFollow = process.env.FITOCRACY_USER_IDS_TO_FOLLOW;
 const slackWebhookUrls = process.env.SLACK_WEBHOOK_URLS;
 
+function lastActivity(userId) {
+  return new Promise(function(resolve, reject) {
+    jsdom.env({
+      url: 'https://www.fitocracy.com/activity_stream/0/?user_id=' + userId,
+      headers: { cookie: fitocracyCookie },
+      scripts: ['http://code.jquery.com/jquery.js'],
+      done: function (error, window) {
+
+        if (error) return reject(error);
+
+        $ = window.$;
+        let workout = $('.stream_item').eq(0);
+
+        let actions = $('ul.action_detail > li', workout).toArray();
+        let author = $('.stream-author', workout).text().trim();
+        let type = $('.stream-type', workout).text().trim();
+        let url = `https://www.fitocracy.com${ $('.action_time', workout).attr('href') }`;
+
+        let parsedActions = actions.map(parseAction);
+
+        let text = `${ author } ${ type }. ${ linkify(url, 'View »') }\n\n${ parsedActions.join('') }`;
+
+        resolve({
+          title: text
+        });
+
+      }
+    });
+  });
+}
 function linkify(link, text) {
   return `<${ link }|${ text }>`;
+}
+function parseAction(action) {
+
+  let groupedWorkout = $('div.group_container', action).length;
+
+  let title = `*${ $('> div.action_prompt', action).text().trim() }*`;
+
+  let note = '';
+  if ($('li.stream_note', action).length) {
+    note = groupedWorkout ? 
+      `\n\n"${ $('li.stream_note', action).text() }"` :
+      `\n> \n> "${ $('li.stream_note', action).text() }"`;
+  }
+
+  let parsedExercises = groupedWorkout ?
+      parseGroupedAction(action) :
+      parseNonGroupedAction(action);
+
+  return groupedWorkout ?
+    `${ title }\n${ parsedExercises.join('\n') }${ note }\n\n` :
+    `\n> ${ title }\n${ parsedExercises.join('\n') }${ note }\n> `;
+
 }
 function parseGroupedAction(action) {
   let exercises = $('div.group_container:eq(0) div > ul > li', action).toArray();
@@ -43,58 +95,6 @@ function parseNonGroupedAction(action) {
     let points = $('span.action_prompt_points', $exercise).remove().text();
 
     return `> ${ $exercise.text().trim() } (${ points } pts)`;
-  });
-}
-function parseAction(action) {
-
-  let groupedWorkout = $('div.group_container', action).length;
-
-  let title = `*${ $('> div.action_prompt', action).text().trim() }*`;
-
-  let note = '';
-  if ($('li.stream_note', action).length) {
-    note = groupedWorkout ? 
-      `\n\n"${ $('li.stream_note', action).text() }"` :
-      `\n> \n> "${ $('li.stream_note', action).text() }"`;
-  }
-
-  let parsedExercises = groupedWorkout ?
-      parseGroupedAction(action) :
-      parseNonGroupedAction(action);
-
-  return groupedWorkout ?
-    `${ title }\n${ parsedExercises.join('\n') }${ note }\n\n` :
-    `\n> ${ title }\n${ parsedExercises.join('\n') }${ note }\n> `;
-
-}
-function lastActivity(userId) {
-  return new Promise(function(resolve, reject) {
-    jsdom.env({
-      url: 'https://www.fitocracy.com/activity_stream/0/?user_id=' + userId,
-      headers: { cookie: fitocracyCookie },
-      scripts: ['http://code.jquery.com/jquery.js'],
-      done: function (error, window) {
-
-        if (error) return reject(error);
-
-        $ = window.$;
-        let workout = $('.stream_item').eq(0);
-
-        let actions = $('ul.action_detail > li', workout).toArray();
-        let author = $('.stream-author', workout).text().trim();
-        let type = $('.stream-type', workout).text().trim();
-        let url = `https://www.fitocracy.com${ $('.action_time', workout).attr('href') }`;
-
-        let parsedActions = actions.map(parseAction);
-
-        let text = `${ author } ${ type }. ${ linkify(url, 'View »') }\n\n${ parsedActions.join('') }`;
-
-        resolve({
-          title: text
-        });
-
-      }
-    });
   });
 }
 function postToSlack(workout) {
