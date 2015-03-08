@@ -22,7 +22,7 @@ function lastActivity(userId) {
         if (error) return reject(error);
 
         $ = window.$;
-        let workout = $('.stream_item').eq(0);
+        let workout = $('.stream_item[data-ag-type="workout"]').eq(0);
 
         let id = parseInt($('.action_time', workout).attr('href').split('/')[2]);
 
