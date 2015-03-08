@@ -15,5 +15,6 @@ A tiny little app to post Fitocracy workouts to Slack.
 10. `heroku addons:add mongolab:sandbox`
 11. `heroku addons:add scheduler:standard`
 12. `git push heroku`
-13. `heroku addons:open scheduler`
-14. Add job -> `node index.js` -> `Every 10 minutes`
+13. `heroku run node .`
+14. `heroku addons:open scheduler`
+15. Add job -> `node index.js` -> `Every 10 minutes`
