@@ -1,9 +1,11 @@
 'use strict';
 
+let $;
+let db;
 let jsdom = require('jsdom');
+let MongoClient = require('mongodb').MongoClient;
 let Promise = require('bluebird');
 let Slack = require('slack-node');
-let $;
 
 const fitocracyCookie = process.env.FITOCRACY_COOKIE;
 const fitocracyUserIdsToFollow = process.env.FITOCRACY_USER_IDS_TO_FOLLOW;
@@ -22,19 +24,35 @@ function lastActivity(userId) {
         $ = window.$;
         let workout = $('.stream_item').eq(0);
 
-        let actions = $('ul.action_detail > li', workout).toArray();
-        let author = $('.stream-author', workout).text().trim();
-        let type = $('.stream-type', workout).text().trim();
-        let url = `https://www.fitocracy.com${ $('.action_time', workout).attr('href') }`;
+        let id = parseInt($('.action_time', workout).attr('href').split('/')[2]);
 
-        let parsedActions = actions.map(parseAction);
+        db.collection('workouts').find({
+          workout_id: id
+        }).toArray(function(err, existingWorkouts) {
+          if (existingWorkouts.length) {
+            return reject(`- ${ id } already tracked.`);
+          }
+          db.collection('workouts').save({
+            workout_id: id
+          }, function(err, result) {
 
-        let text = `${ author } ${ type }. ${ linkify(url, 'View »') }\n\n${ parsedActions.join('') }`;
+            console.log('- Added workout', result.workout_id + '.');
 
-        resolve({
-          title: text
+            let actions = $('ul.action_detail > li', workout).toArray();
+            let author = $('.stream-author', workout).text().trim();
+            let type = $('.stream-type', workout).text().trim();
+            let url = `https://www.fitocracy.com${ $('.action_time', workout).attr('href') }`;
+
+            let parsedActions = actions.map(parseAction);
+
+            let text = `${ author } ${ type }. ${ linkify(url, 'View »') }\n\n${ parsedActions.join('') }`;
+
+            resolve({
+              title: text
+            });
+
+          });
         });
-
       }
     });
   });
@@ -97,7 +115,7 @@ function parseNonGroupedAction(action) {
     return `> ${ $exercise.text().trim() } (${ points } pts)`;
   });
 }
-function postToSlack(workout) {
+function postToSlack(workout, resolve) {
 
   let payload = {
     username: 'Fitocracy',
@@ -110,13 +128,33 @@ function postToSlack(workout) {
     slack.setWebhook(webhookUrl);
     slack.webhook(payload, function(err, response) {
       if (err) throw err;
+      resolve();
     });
   });
 
 }
 
-fitocracyUserIdsToFollow.split(',').forEach(function(userId) {
-  lastActivity(userId).then(function(workout) {
-    postToSlack(workout);
+var mongoUri = process.env.MONGOLAB_URI || process.env.MONGOHQ_URL || 'mongodb://localhost/slacktocracy';
+MongoClient.connect(mongoUri, function(err, mongoDb) {
+
+  db = mongoDb;
+  
+  let promises = [];
+
+  fitocracyUserIdsToFollow.split(',').forEach(function(userId) {
+
+    promises.push(new Promise(function(resolve, reject) {
+      lastActivity(userId).then(function(workout) {
+        return postToSlack(workout, resolve);
+      }).catch(function(error) {
+        resolve(console.error(error));
+      });
+    }));
   });
+
+  Promise.all(promises).then(function() {
+    console.log('Done.');
+    process.exit();
+  });
+
 });
