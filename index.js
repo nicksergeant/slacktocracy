@@ -24,6 +24,8 @@ function lastActivity(userId) {
         $ = window.$;
         let workout = $('.stream_item[data-ag-type="workout"]').eq(0);
 
+        if (!workout.length) return reject(`User "${ userId }" has no workouts.`);
+
         let id = parseInt($('.action_time', workout).attr('href').split('/')[2]);
 
         db.collection('workouts').find({
