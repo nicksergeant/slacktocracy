@@ -1,15 +1,16 @@
 'use strict';
 
 let $;
-let db;
+let db = require('./lib/db');
+let slack = require('./lib/slack');
 let jsdom = require('jsdom');
-let MongoClient = require('mongodb').MongoClient;
 let Promise = require('bluebird');
-let Slack = require('slack-node');
 
 const fitocracyCookie = process.env.FITOCRACY_COOKIE;
 const fitocracyUserIdsToFollow = process.env.FITOCRACY_USER_IDS_TO_FOLLOW;
-const slackWebhookUrls = process.env.SLACK_WEBHOOK_URLS;
+
+if (!fitocracyCookie) return console.error('FITOCRACY_COOKIE is not defined');
+if (!fitocracyUserIdsToFollow) return console.error('FITOCRACY_USER_IDS_TO_FOLLOW is not defined');
 
 function lastActivity(userId) {
   return new Promise(function(resolve, reject) {
@@ -28,15 +29,18 @@ function lastActivity(userId) {
 
         let id = parseInt($('.action_time', workout).attr('href').split('/')[2]);
 
-        db.collection('workouts').find({
+        db.connection.collection('workouts').find({
           workout_id: id
-        }).toArray(function(err, existingWorkouts) {
-          if (existingWorkouts.length) {
+        }).toArray(function(error, existingWorkouts) {
+          // if (existingWorkouts.length) {
+          if (false) {
             return reject(`- ${ id } already tracked.`);
           }
-          db.collection('workouts').save({
+          db.connection.collection('workouts').save({
             workout_id: id
-          }, function(err, result) {
+          }, function(error, result) {
+
+            if (error) return reject(error);
 
             console.log('- Added workout', result.workout_id + '.');
 
@@ -47,11 +51,9 @@ function lastActivity(userId) {
 
             let parsedActions = actions.map(parseAction);
 
-            let text = `${ author } ${ type }. ${ linkify(url, 'View »') }\n\n${ parsedActions.join('') }`;
+            let message = `${ author } ${ type }. ${ linkify(url, 'View »') }\n\n${ parsedActions.join('') }`;
 
-            resolve({
-              title: text
-            });
+            resolve(message);
 
           });
         });
@@ -117,41 +119,19 @@ function parseNonGroupedAction(action) {
     return `> ${ $exercise.text().trim() } (${ points } pts)`;
   });
 }
-function postToSlack(workout, resolve) {
 
-  let payload = {
-    username: 'Fitocracy',
-    icon_emoji: 'http://i.imgur.com/ZmrMHuA.png',
-    text: workout.title
-  };
-
-  slackWebhookUrls.split(',').forEach(function(webhookUrl) {
-    let slack = new Slack();
-    slack.setWebhook(webhookUrl);
-    slack.webhook(payload, function(err, response) {
-      if (err) throw err;
-      resolve();
-    });
-  });
-
-}
-
-var mongoUri = process.env.MONGOLAB_URI || process.env.MONGOHQ_URL || 'mongodb://localhost/slacktocracy';
-MongoClient.connect(mongoUri, function(err, mongoDb) {
-
-  db = mongoDb;
+db.connect().then(function() {
   
   let promises = [];
 
   fitocracyUserIdsToFollow.split(',').forEach(function(userId) {
-
-    promises.push(new Promise(function(resolve, reject) {
-      lastActivity(userId).then(function(workout) {
-        return postToSlack(workout, resolve);
-      }).catch(function(error) {
-        resolve(console.error(error));
-      });
-    }));
+    promises.push(
+      lastActivity(userId)
+        .then(slack.postMessage)
+        .catch(function(error) {
+          console.error(error);
+        })
+    );
   });
 
   Promise.all(promises).then(function() {

@@ -3,7 +3,11 @@
   "evil": true,
   "esnext": true,
   "globals": {
+    "console": true,
+    "module": true,
     "process": true,
+    "require": true
   },
-  "globalstrict": true
+  "globalstrict": true,
+  "undef": true
 }
