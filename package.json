@@ -4,7 +4,7 @@
   "description": "A tiny little app to post Fitocracy workouts to Slack.",
   "main": "index.js",
   "engines": {
-    "iojs": "1.5.x"
+    "iojs": "2.3.x"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
